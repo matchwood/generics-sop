@@ -85,6 +85,11 @@ module Data.SOP.NP
   , fromI_POP
   , toI_NP
   , toI_POP
+    -- * Curry / uncurry
+  , Curried
+  , CurriedF
+  , uncurry_NP
+  , uncurryI_NP
   ) where
 
 #if !(MIN_VERSION_base(4,8,0))
@@ -889,3 +894,32 @@ instance HTrans NP NP where
 instance HTrans POP POP where
   htrans  = trans_POP
   hcoerce = coerce_POP
+
+-- * Curry / uncurry
+
+type family Curried ts r where
+  Curried '[] r = r
+  Curried (x ': xs) r = x -> Curried xs r
+
+type family CurriedF (f :: k -> *) (ts :: [k]) r where
+  CurriedF f '[] r = r
+  CurriedF f (t ': ts) r = f t -> CurriedF f ts r
+
+-- | Uncurry for 'NP'
+--
+-- Example:
+--
+-- > x :: Int -> Bool -> String -> String
+-- > x = [..]
+-- >
+-- > y :: NP f [Int, Bool, String] -> String
+-- > y = uncurry_NP x
+
+uncurry_NP :: CurriedF f xs r -> NP f xs -> r
+uncurry_NP r Nil = r
+uncurry_NP f (x :* xs) = uncurry_NP (f x) xs
+
+uncurryI_NP :: Curried xs r -> NP I xs -> r
+uncurryI_NP r Nil = r
+uncurryI_NP f (I x :* xs) = uncurryI_NP (f x) xs
+
